@@ -1,6 +1,9 @@
+use crate::character::CharacterSet;
+use crate::character::DrawCharacterSet;
+use crate::instance::{Instance, InstanceRaw};
 use crate::model::Vertex;
 use crate::network::Network;
-use ::network::Packet;
+use ::network::{Connection, Packet};
 use cgmath::{InnerSpace, Rotation3, Zero};
 use image::GenericImageView;
 use serde::{Deserialize, Serialize};
@@ -12,6 +15,8 @@ use winit::{
     window::{Window, WindowBuilder},
 };
 
+mod character;
+mod instance;
 mod model;
 mod network;
 mod texture;
@@ -126,7 +131,7 @@ impl CameraUniform {
     }
 }
 
-struct Instance {
+/*struct Instance {
     position: cgmath::Vector3<f32>,
     rotation: cgmath::Quaternion<f32>,
 }
@@ -203,7 +208,7 @@ impl InstanceRaw {
             ],
         }
     }
-}
+}*/
 
 struct CameraController {
     speed: f32,
@@ -340,12 +345,13 @@ struct State {
     light_buffer: wgpu::Buffer,
     light_bind_group: wgpu::BindGroup,
 
-    network: Network,
+    network: Connection,
+    character_set: CharacterSet,
 }
 
 impl State {
     // Creating some of the wgpu types requires async code
-    async fn new(window: &Window, network: Network) -> Self {
+    async fn new(window: &Window, network: Connection) -> Self {
         let size = window.inner_size();
 
         // GPU hande
@@ -725,6 +731,8 @@ impl State {
         )
         .unwrap();
 
+        let character_set = CharacterSet::new(&device, &queue, &texture_bind_group_layout);
+
         Self {
             surface,
             device,
@@ -764,6 +772,7 @@ impl State {
             light_buffer,
             light_bind_group,
             network,
+            character_set,
         }
     }
 
@@ -818,7 +827,24 @@ impl State {
     }
 
     fn update(&mut self) {
-        self.network.update();
+        let packets = self.network.packets().unwrap();
+        for packet in packets.iter() {
+            match packet {
+                Packet::CreateCharacter {
+                    id,
+                    username,
+                    position,
+                    is_owned,
+                } => {
+                    if !is_owned {
+                        self.character_set.add(*id, position.clone());
+                    }
+                }
+                Packet::Login { .. } => {
+                    panic!("Impossible packet");
+                }
+            }
+        }
 
         // Update the camera
         self.camera_controller.update_camera(&mut self.camera);
@@ -893,6 +919,8 @@ impl State {
             //let material = &self.obj_model.materials[mesh.material];
             render_pass.draw_model_instanced(&self.obj_model, 0..self.instances.len() as u32);
 
+            render_pass.draw_character_set(&self.queue, &mut self.character_set);
+
             /*render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
             render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
             render_pass.draw_indexed(0..self.num_indices, 0, 0..self.instances.len() as _);*/
@@ -908,9 +936,12 @@ fn main() {
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new().build(&event_loop).unwrap();
 
-    let network = Network::new();
+    let mut connection = Connection::connect().unwrap();
+    connection
+        .send(&Packet::Login { username: [5; 20] })
+        .unwrap();
 
-    let mut state = pollster::block_on(State::new(&window, network));
+    let mut state = pollster::block_on(State::new(&window, connection));
 
     event_loop.run(move |event, _, control_flow| match event {
         Event::RedrawRequested(_) => {

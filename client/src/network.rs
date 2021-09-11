@@ -1,4 +1,5 @@
 use ::network::{Connection, Packet};
+use anyhow::*;
 use std::net::UdpSocket;
 
 pub struct Network {
@@ -14,7 +15,10 @@ impl Network {
         Self { cxn: connection }
     }
 
-    pub fn update(&mut self) {
-        //
+    pub fn update(&mut self) -> Result<()> {
+        /*self.cxn.update(|packet| {
+            //
+        })?;*/
+        Ok(())
     }
 }
