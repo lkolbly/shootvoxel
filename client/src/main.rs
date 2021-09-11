@@ -6,6 +6,7 @@ use crate::network::Network;
 use ::network::{Connection, Packet};
 use cgmath::{InnerSpace, Rotation3, Zero};
 use image::GenericImageView;
+use log::*;
 use serde::{Deserialize, Serialize};
 use std::net::UdpSocket;
 use wgpu::util::DeviceExt;
@@ -359,11 +360,8 @@ impl State {
         // GPU hande
         let instance = wgpu::Instance::new(wgpu::Backends::PRIMARY);
         let surface = unsafe { instance.create_surface(window) };
-        let adapter = instance
-            .request_adapter(&wgpu::RequestAdapterOptions {
-                power_preference: wgpu::PowerPreference::default(),
-                compatible_surface: Some(&surface),
-            })
+        let backend = wgpu::util::backend_bits_from_env().unwrap_or(wgpu::Backends::PRIMARY);
+        let adapter = wgpu::util::initialize_adapter_from_env_or_default(&instance, backend)
             .await
             .unwrap();
 
@@ -946,7 +944,10 @@ impl State {
 }
 
 fn main() {
-    env_logger::init();
+    env_logger::Builder::new()
+        .parse_filters("warn,client=trace")
+        .init();
+
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new().build(&event_loop).unwrap();
 
@@ -990,9 +991,14 @@ fn main() {
                         ..
                     } => *control_flow = ControlFlow::Exit,
                     WindowEvent::Resized(physical_size) => {
+                        info!("Resize requested to {:?}", physical_size);
                         state.resize(*physical_size);
                     }
                     WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
+                        info!(
+                            "Scale factor changed to new_inner_size={:?}",
+                            new_inner_size
+                        );
                         state.resize(**new_inner_size);
                     }
                     _ => {}

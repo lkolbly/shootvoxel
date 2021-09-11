@@ -31,13 +31,14 @@ impl CharacterSet {
             panic!("Instance overrun");
         }
         info!("Creating character at {:?}", position);
-        let instance = Instance {
+        let mut instance = Instance {
             position: position.into(),
             rotation: cgmath::Quaternion::from_axis_angle(
                 cgmath::Vector3::unit_z(),
                 cgmath::Deg(0.0),
             ),
         };
+        instance.position[1] = 1.5;
         let instance_id = self.instance_buffer.instances.len();
         self.instance_buffer.instances.push(instance);
         self.characters.insert(id, Character { instance_id });
@@ -54,6 +55,7 @@ where
 {
     fn draw_character_set(&mut self, queue: &'_ wgpu::Queue, charset: &'b mut CharacterSet) {
         charset.instance_buffer.update(queue);
+        self.set_vertex_buffer(1, charset.instance_buffer.instance_buffer.slice(..));
         self.draw_model_instanced(&charset.model, 0..charset.characters.len() as u32);
     }
 }

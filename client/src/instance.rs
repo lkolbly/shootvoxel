@@ -29,7 +29,7 @@ impl Instance {
 
 pub struct InstanceBuffer {
     pub instances: Vec<Instance>,
-    instance_buffer: wgpu::Buffer,
+    pub instance_buffer: wgpu::Buffer,
 }
 
 impl InstanceBuffer {
@@ -38,7 +38,7 @@ impl InstanceBuffer {
             Instance {
                 position: cgmath::Vector3 {
                     x: 0.0,
-                    y: 0.0,
+                    y: 1.0,
                     z: 0.0
                 },
                 rotation: cgmath::Quaternion::from_axis_angle(
@@ -52,7 +52,7 @@ impl InstanceBuffer {
         let instance_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Instance Buffer"),
             contents: bytemuck::cast_slice(&instance_data),
-            usage: wgpu::BufferUsages::VERTEX,
+            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
         });
         Self {
             instances: vec![],

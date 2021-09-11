@@ -6,7 +6,6 @@ use std::cell::RefCell;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::sync::atomic::{AtomicU32, Ordering};
-use std::sync::mpsc::{channel, Receiver, Sender};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Packet {
@@ -50,7 +49,7 @@ impl Connection {
     }
 
     pub fn connect() -> Result<Self> {
-        let mut stream = TcpStream::connect("127.0.0.1:3419")?;
+        let stream = TcpStream::connect("127.0.0.1:3419")?;
         stream.set_nonblocking(true)?;
         Ok(Self {
             uid: get_next_uid(),
@@ -99,7 +98,7 @@ impl Connection {
             // Parse this packet!
             let packet: Packet = bincode::deserialize(&self.buffer.borrow()[2..2 + size])
                 .context("Decoding packet")?;
-            cb(&packet);
+            cb(&packet)?;
 
             self.buffer.borrow_mut().drain(..2 + size);
         }
@@ -121,7 +120,7 @@ pub struct ConnectionListener {
 
 impl ConnectionListener {
     pub fn new() -> Result<Self> {
-        let mut tcp_listener = TcpListener::bind("127.0.0.1:3419").unwrap();
+        let tcp_listener = TcpListener::bind("127.0.0.1:3419").unwrap();
         tcp_listener.set_nonblocking(true).unwrap();
         Ok(Self {
             listener: tcp_listener,
