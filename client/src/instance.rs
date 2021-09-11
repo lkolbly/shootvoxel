@@ -1,13 +1,5 @@
-use cgmath::{InnerSpace, Rotation3, Zero};
-use image::GenericImageView;
-use serde::{Deserialize, Serialize};
-use std::net::UdpSocket;
+use cgmath::Rotation3;
 use wgpu::util::DeviceExt;
-use winit::{
-    event::*,
-    event_loop::{ControlFlow, EventLoop},
-    window::{Window, WindowBuilder},
-};
 
 #[derive(Clone)]
 pub struct Instance {

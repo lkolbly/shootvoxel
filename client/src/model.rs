@@ -1,6 +1,5 @@
 use crate::texture;
 use anyhow::*;
-use image::GenericImageView;
 use std::ops::Range;
 use std::path::Path;
 use tobj::*;

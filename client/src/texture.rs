@@ -29,8 +29,7 @@ impl Texture {
         image: &image::DynamicImage,
         label: Option<&str>,
     ) -> Result<Self> {
-        let rgba = image.to_rgba();
-        //let rgba = image.as_rgba8().unwrap();
+        let rgba = image.to_rgba8();
         let dimensions = image.dimensions();
         let texture_size = wgpu::Extent3d {
             width: dimensions.0,
