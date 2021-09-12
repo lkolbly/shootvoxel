@@ -1,4 +1,5 @@
 use rand::prelude::*;
+use serde_derive::Serialize;
 use std::collections::{HashMap, HashSet};
 use std::io::Write;
 
@@ -217,6 +218,7 @@ fn is_connected(spec: &DungeonSpecification, rooms: &Vec<Room>) -> bool {
     areas.iter().all(|area| *area == areas[0])
 }
 
+#[derive(Serialize)]
 struct Voxel {
     x: u16,
     y: u16,
@@ -385,5 +387,11 @@ fn main() {
         // Swap Z and Y for Goxel
         f.write_all(format!("{} {} {} ffffffff\n", voxel.x, voxel.z, voxel.y).as_bytes())
             .unwrap();
+    }
+
+    let mut f = std::fs::File::create("map.bin").unwrap();
+    f.write_all(&(voxels.len() as u32).to_le_bytes()).unwrap();
+    for voxel in voxels.iter() {
+        f.write_all(&bincode::serialize(&voxel).unwrap()).unwrap();
     }
 }

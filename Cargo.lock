@@ -851,7 +851,10 @@ dependencies = [
 name = "mapgen"
 version = "0.1.0"
 dependencies = [
+ "bincode",
  "rand",
+ "serde",
+ "serde_derive",
 ]
 
 [[package]]

@@ -3,6 +3,7 @@ use crate::character::CharacterSet;
 use crate::character::DrawCharacterSet;
 use crate::fpscounter::FpsCounter;
 use crate::instance::{Instance, InstanceRaw};
+use crate::map::{DrawMap, Map};
 use crate::model::Vertex;
 use ::network::{Connection, Packet};
 use cgmath::{InnerSpace, Rotation3, Zero};
@@ -19,6 +20,7 @@ mod camera;
 mod character;
 mod fpscounter;
 mod instance;
+mod map;
 mod model;
 mod texture;
 
@@ -98,6 +100,7 @@ struct State {
     last_pos_update: Instant,
     cursor_locked: bool,
     fps: FpsCounter,
+    map: Map,
 }
 
 impl State {
@@ -337,6 +340,7 @@ impl State {
 
         let character_set = CharacterSet::new(&device, &queue, &texture_bind_group_layout);
         let player = Player::new();
+        let map = Map::new(&device, &queue, &texture_bind_group_layout);
 
         Self {
             surface,
@@ -366,6 +370,7 @@ impl State {
             last_pos_update: Instant::now(),
             cursor_locked: false,
             fps: FpsCounter::new(),
+            map,
         }
     }
 
@@ -557,6 +562,7 @@ impl State {
             render_pass.draw_model_instanced(&self.obj_model, 0..self.instances.len() as u32);
 
             render_pass.draw_character_set(&self.queue, &mut self.character_set);
+            render_pass.draw_map(&self.queue, &mut self.map);
         }
 
         self.queue.submit(std::iter::once(encoder.finish()));
