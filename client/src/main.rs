@@ -38,6 +38,7 @@ struct Player {
     moving_backward: bool,
     moving_left: bool,
     moving_right: bool,
+    last_update: Instant,
 }
 
 impl Player {
@@ -52,6 +53,7 @@ impl Player {
             moving_backward: false,
             moving_left: false,
             moving_right: false,
+            last_update: Instant::now(),
         }
     }
 
@@ -70,7 +72,8 @@ impl Player {
         let right = if self.moving_right { 1.0 } else { 0.0 };
 
         let movement = at * forward - at * backward - side_vector * left + side_vector * right;
-        let speed = 0.002;
+        let speed = 0.5 * self.last_update.elapsed().as_secs_f32();
+        self.last_update = Instant::now();
         self.position += speed * movement;
     }
 }
