@@ -90,7 +90,6 @@ struct State {
     instances: Vec<Instance>,
     instance_buffer: wgpu::Buffer,
     depth_texture: texture::Texture,
-    depth_bind_group: wgpu::BindGroup,
     obj_model: model::Model,
 
     light_uniform: LightUniform,
@@ -167,45 +166,6 @@ impl State {
                 ],
                 label: Some("Texture bind group layout"),
             });
-        let depth_texture_bind_group_layout =
-            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                entries: &[
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 0,
-                        visibility: wgpu::ShaderStages::FRAGMENT,
-                        ty: wgpu::BindingType::Texture {
-                            multisampled: false,
-                            view_dimension: wgpu::TextureViewDimension::D2,
-                            sample_type: wgpu::TextureSampleType::Depth,
-                        },
-                        count: None,
-                    },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 1,
-                        visibility: wgpu::ShaderStages::FRAGMENT,
-                        ty: wgpu::BindingType::Sampler {
-                            comparison: true,
-                            filtering: true,
-                        },
-                        count: None,
-                    },
-                ],
-                label: Some("Texture bind group layout"),
-            });
-        let depth_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            layout: &depth_texture_bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::TextureView(&depth_texture.view),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::Sampler(&depth_texture.sampler),
-                },
-            ],
-            label: Some("Depth bind group descriptor"),
-        });
 
         let light_uniform = LightUniform {
             position: [2.0, 2.0, 2.0],
@@ -286,7 +246,6 @@ impl State {
                 bind_group_layouts: &[
                     &texture_bind_group_layout,
                     &camera.bind_group_layout,
-                    &depth_texture_bind_group_layout,
                     &light_bind_group_layout,
                 ],
                 push_constant_ranges: &[],
@@ -361,7 +320,6 @@ impl State {
             instances,
             instance_buffer,
             depth_texture,
-            depth_bind_group,
             obj_model,
             light_uniform,
             light_buffer,
@@ -556,8 +514,7 @@ impl State {
 
             render_pass.set_pipeline(&self.render_pipeline2);
             render_pass.set_bind_group(1, &self.camera.bind_group, &[]);
-            render_pass.set_bind_group(2, &self.depth_bind_group, &[]);
-            render_pass.set_bind_group(3, &self.light_bind_group, &[]);
+            render_pass.set_bind_group(2, &self.light_bind_group, &[]);
 
             render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
 

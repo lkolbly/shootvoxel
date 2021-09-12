@@ -24,7 +24,7 @@ struct Light {
     position: vec3<f32>;
     color: vec3<f32>;
 };
-[[group(3), binding(0)]]
+[[group(2), binding(0)]]
 var<uniform> light: Light;
 
 struct VertexInput {
@@ -73,11 +73,6 @@ fn main(
 var t_diffuse: texture_2d<f32>;
 [[group(0), binding(1)]]
 var s_diffuse: sampler;
-
-[[group(2), binding(0)]]
-var t_depth: texture_depth_2d;
-[[group(2), binding(1)]]
-var s_depth: sampler_comparison;
 
 [[stage(fragment)]]
 fn main(in: VertexOutput) -> [[location(0)]] vec4<f32> {
