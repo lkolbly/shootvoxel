@@ -6,6 +6,7 @@ use crate::model::Vertex;
 use ::network::{Connection, Packet};
 use cgmath::{InnerSpace, Rotation3, Zero};
 use log::*;
+use std::time::{Duration, Instant};
 use wgpu::util::DeviceExt;
 use winit::{
     event::*,
@@ -29,6 +30,10 @@ struct LightUniform {
 
 struct Player {
     position: cgmath::Point3<f32>,
+    moving_forward: bool,
+    moving_backward: bool,
+    moving_left: bool,
+    moving_right: bool,
 }
 
 impl Player {
@@ -39,7 +44,30 @@ impl Player {
                 y: 0.0,
                 z: 0.0,
             },
+            moving_forward: false,
+            moving_backward: false,
+            moving_left: false,
+            moving_right: false,
         }
+    }
+
+    fn update(&mut self, camera: &Camera) {
+        let at = camera.at();
+        let at = cgmath::Vector3 {
+            x: at.x,
+            y: 0.0,
+            z: at.z,
+        };
+        let side_vector = at.cross(cgmath::Vector3::unit_y());
+
+        let forward = if self.moving_forward { 1.0 } else { 0.0 };
+        let backward = if self.moving_backward { 1.0 } else { 0.0 };
+        let left = if self.moving_left { 1.0 } else { 0.0 };
+        let right = if self.moving_right { 1.0 } else { 0.0 };
+
+        let movement = at * forward - at * backward - side_vector * left + side_vector * right;
+        let speed = 0.002;
+        self.position += speed * movement;
     }
 }
 
@@ -65,6 +93,8 @@ struct State {
     network: Connection,
     character_set: CharacterSet,
     player: Player,
+    last_pos_update: Instant,
+    cursor_locked: bool,
 }
 
 impl State {
@@ -330,6 +360,8 @@ impl State {
             character_set,
             surface_config,
             player,
+            last_pos_update: Instant::now(),
+            cursor_locked: false,
         }
     }
 
@@ -356,11 +388,30 @@ impl State {
                     && input.state == winit::event::ElementState::Released
                 {
                     true
+                } else if input.virtual_keycode == Some(winit::event::VirtualKeyCode::W) {
+                    self.player.moving_forward = input.state == winit::event::ElementState::Pressed;
+                    true
+                } else if input.virtual_keycode == Some(winit::event::VirtualKeyCode::A) {
+                    self.player.moving_left = input.state == winit::event::ElementState::Pressed;
+                    true
+                } else if input.virtual_keycode == Some(winit::event::VirtualKeyCode::S) {
+                    self.player.moving_backward =
+                        input.state == winit::event::ElementState::Pressed;
+                    true
+                } else if input.virtual_keycode == Some(winit::event::VirtualKeyCode::D) {
+                    self.player.moving_right = input.state == winit::event::ElementState::Pressed;
+                    true
+                } else if input.virtual_keycode == Some(winit::event::VirtualKeyCode::Tab)
+                    && self.cursor_locked
+                {
+                    self.cursor_locked = false;
+                    window.set_cursor_grab(false).unwrap();
+                    true
                 } else {
                     false
                 }
             }
-            WindowEvent::CursorMoved { position: pos, .. } => {
+            WindowEvent::CursorMoved { position: pos, .. } if self.cursor_locked => {
                 window
                     .set_cursor_position(winit::dpi::PhysicalPosition::new(100, 100))
                     .unwrap();
@@ -374,6 +425,18 @@ impl State {
                     a: 1.0,
                 };
                 true
+            }
+            WindowEvent::MouseInput { button, state, .. } => {
+                if !self.cursor_locked {
+                    self.cursor_locked = true;
+                    window.set_cursor_grab(true).unwrap();
+                    window
+                        .set_cursor_position(winit::dpi::PhysicalPosition::new(100, 100))
+                        .unwrap();
+                    true
+                } else {
+                    false
+                }
             }
             _ => false,
         };
@@ -406,13 +469,28 @@ impl State {
                         self.character_set.add(*id, position.clone());
                     }
                 }
+                Packet::UpdatePosition { id, position } => {
+                    self.character_set.update_position(*id, position.clone());
+                }
                 Packet::Login { .. } => {
                     panic!("Impossible packet");
                 }
             }
         }
 
+        if self.last_pos_update.elapsed() > Duration::from_millis(50) {
+            self.last_pos_update = Instant::now();
+            self.network
+                .send(&Packet::UpdatePosition {
+                    id: 0,
+                    position: self.player.position.into(),
+                })
+                .unwrap();
+        }
+
         // Update the camera
+        self.player.update(&self.camera);
+        self.camera.set_position(&self.player.position);
         self.camera.update(&self.queue);
 
         // Move the light
@@ -494,8 +572,6 @@ fn main() {
         .unwrap();
 
     let mut state = pollster::block_on(State::new(&window, connection));
-
-    window.set_cursor_grab(true).unwrap();
 
     event_loop.run(move |event, _, control_flow| match event {
         Event::RedrawRequested(_) => {

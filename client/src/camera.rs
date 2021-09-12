@@ -99,6 +99,16 @@ impl Camera {
         );
     }
 
+    pub fn at(&self) -> cgmath::Vector3<f32> {
+        self.target - self.eye
+    }
+
+    pub fn set_position(&mut self, new_pos: &cgmath::Point3<f32>) {
+        let at = self.at();
+        self.eye = *new_pos + 1.7f32 * cgmath::Vector3::unit_y();
+        self.target = self.eye + at;
+    }
+
     fn build_view_projection_matrix(&self) -> cgmath::Matrix4<f32> {
         let view = cgmath::Matrix4::look_at_rh(self.eye, self.target, self.up);
         let proj = cgmath::perspective(cgmath::Deg(self.fovy), self.aspect, self.znear, self.zfar);

@@ -22,6 +22,11 @@ pub enum Packet {
         /// If true, then this character is owned by the given connection
         is_owned: bool,
     },
+
+    /// Sent from the client to the server to update the player's position
+    /// Sent from the server to the client with the id filled in to update other
+    /// player's positions.
+    UpdatePosition { id: u32, position: [f32; 3] },
 }
 
 pub struct Connection {

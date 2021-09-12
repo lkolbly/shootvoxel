@@ -43,6 +43,11 @@ impl CharacterSet {
         self.instance_buffer.instances.push(instance);
         self.characters.insert(id, Character { instance_id });
     }
+
+    pub fn update_position(&mut self, id: u32, position: [f32; 3]) {
+        let character = self.characters.get(&id).unwrap();
+        self.instance_buffer.instances[character.instance_id].position = position.into();
+    }
 }
 
 pub trait DrawCharacterSet<'a> {

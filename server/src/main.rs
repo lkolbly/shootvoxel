@@ -69,8 +69,17 @@ fn main() {
                                 is_owned: false,
                             },
                         ));
-                        game.players.insert(next_id, player);
+                        game.players.insert(cxn.uid(), player);
                         next_id += 1;
+                    }
+                    Packet::UpdatePosition { position, .. } => {
+                        updates.push((
+                            cxn.uid(),
+                            Packet::UpdatePosition {
+                                id: cxn.uid(),
+                                position: position.clone(),
+                            },
+                        ));
                     }
                     Packet::CreateCharacter { .. } => {
                         panic!("Impossible packet!");
