@@ -1,4 +1,5 @@
 use anyhow::*;
+use cgmath::{InnerSpace, Rotation3};
 use wgpu::util::DeviceExt;
 
 #[rustfmt::skip]
@@ -71,6 +72,21 @@ impl Camera {
             bind_group_layout: camera_bind_group_layout,
             bind_group,
         })
+    }
+
+    /// Rotate the camera based on the input mouse movement. dx rotates around the Y axis,
+    /// dy looks up-and-down.
+    pub fn input(&mut self, dx: f64, dy: f64) {
+        let dx = -0.25 * dx as f32;
+        let dy = 0.25 * dy as f32;
+        let at = self.target - self.eye;
+        let at =
+            cgmath::Quaternion::from_axis_angle(cgmath::Vector3::unit_y(), cgmath::Deg(dx)) * at;
+        let at = cgmath::Quaternion::from_axis_angle(
+            cgmath::Vector3::unit_y().cross(at).normalize(),
+            cgmath::Deg(dy),
+        ) * at;
+        self.target = self.eye + at;
     }
 
     pub fn update(&mut self, queue: &wgpu::Queue) {

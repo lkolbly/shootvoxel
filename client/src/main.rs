@@ -27,6 +27,22 @@ struct LightUniform {
     color: [f32; 3],
 }
 
+struct Player {
+    position: cgmath::Point3<f32>,
+}
+
+impl Player {
+    fn new() -> Self {
+        Self {
+            position: cgmath::Point3 {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+        }
+    }
+}
+
 struct State {
     surface: wgpu::Surface,
     surface_config: wgpu::SurfaceConfiguration,
@@ -48,6 +64,7 @@ struct State {
 
     network: Connection,
     character_set: CharacterSet,
+    player: Player,
 }
 
 impl State {
@@ -286,6 +303,7 @@ impl State {
         .unwrap();
 
         let character_set = CharacterSet::new(&device, &queue, &texture_bind_group_layout);
+        let player = Player::new();
 
         Self {
             surface,
@@ -311,6 +329,7 @@ impl State {
             network,
             character_set,
             surface_config,
+            player,
         }
     }
 
@@ -326,7 +345,7 @@ impl State {
         }
     }
 
-    fn input(&mut self, event: &WindowEvent) -> bool {
+    fn input(&mut self, event: &WindowEvent, window: &winit::window::Window) -> bool {
         let processed = match event {
             WindowEvent::KeyboardInput { input, .. } => {
                 if input.virtual_keycode == Some(winit::event::VirtualKeyCode::Space)
@@ -342,6 +361,12 @@ impl State {
                 }
             }
             WindowEvent::CursorMoved { position: pos, .. } => {
+                window
+                    .set_cursor_position(winit::dpi::PhysicalPosition::new(100, 100))
+                    .unwrap();
+                let dx = pos.x - 100.0;
+                let dy = pos.y - 100.0;
+                self.camera.input(dx, dy);
                 self.bg_color = wgpu::Color {
                     r: pos.x / self.size.width as f64,
                     g: pos.y / self.size.height as f64,
@@ -370,7 +395,14 @@ impl State {
                     position,
                     is_owned,
                 } => {
-                    if !is_owned {
+                    if *is_owned {
+                        // This is the player character
+                        self.player.position = cgmath::Point3 {
+                            x: position[0],
+                            y: position[1],
+                            z: position[2],
+                        };
+                    } else {
                         self.character_set.add(*id, position.clone());
                     }
                 }
@@ -463,6 +495,8 @@ fn main() {
 
     let mut state = pollster::block_on(State::new(&window, connection));
 
+    window.set_cursor_grab(true).unwrap();
+
     event_loop.run(move |event, _, control_flow| match event {
         Event::RedrawRequested(_) => {
             state.update();
@@ -483,7 +517,7 @@ fn main() {
             ref event,
             window_id,
         } if window_id == window.id() => {
-            if !state.input(event) {
+            if !state.input(event, &window) {
                 match event {
                     WindowEvent::CloseRequested
                     | WindowEvent::KeyboardInput {
