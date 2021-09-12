@@ -1,6 +1,7 @@
 use crate::camera::Camera;
 use crate::character::CharacterSet;
 use crate::character::DrawCharacterSet;
+use crate::fpscounter::FpsCounter;
 use crate::instance::{Instance, InstanceRaw};
 use crate::model::Vertex;
 use ::network::{Connection, Packet};
@@ -16,6 +17,7 @@ use winit::{
 
 mod camera;
 mod character;
+mod fpscounter;
 mod instance;
 mod model;
 mod texture;
@@ -95,6 +97,7 @@ struct State {
     player: Player,
     last_pos_update: Instant,
     cursor_locked: bool,
+    fps: FpsCounter,
 }
 
 impl State {
@@ -362,6 +365,7 @@ impl State {
             player,
             last_pos_update: Instant::now(),
             cursor_locked: false,
+            fps: FpsCounter::new(),
         }
     }
 
@@ -507,6 +511,8 @@ impl State {
     }
 
     fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
+        self.fps.frame();
+
         let frame = self.surface.get_current_frame()?.output;
 
         let mut encoder = self
